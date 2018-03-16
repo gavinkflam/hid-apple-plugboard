@@ -1,20 +1,3 @@
-/*
- *  USB HID quirks support for Linux
- *
- *  Copyright (c) 1999 Andreas Gal
- *  Copyright (c) 2000-2005 Vojtech Pavlik <vojtech@suse.cz>
- *  Copyright (c) 2005 Michael Haboustak <mike-@cinci.rr.com> for Concept2, Inc
- *  Copyright (c) 2006-2007 Jiri Kosina
- *  Copyright (c) 2008 Jiri Slaby <jirislaby@gmail.com>
- */
-
-/*
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the Free
- * Software Foundation; either version 2 of the License, or (at your option)
- * any later version.
- */
-
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/device.h>
@@ -22,149 +5,14 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 
-#include "hid-ids.h"
-
-#define APPLE_RDESC_JIS		0x0001
-#define APPLE_IGNORE_MOUSE	0x0002
-#define APPLE_HAS_FN		0x0004
-#define APPLE_HIDDEV		0x0008
-/* 0x0010 reserved, was: APPLE_ISO_KEYBOARD */
-#define APPLE_MIGHTYMOUSE	0x0020
-#define APPLE_INVERT_HWHEEL	0x0040
-#define APPLE_IGNORE_HIDINPUT	0x0080
-#define APPLE_NUMLOCK_EMULATION	0x0100
-
-#define APPLE_FLAG_FKEY		0x01
-
-#define HID_COUNTRY_INTERNATIONAL_ISO	13
+#include "hid-apple.h"
+#include "quirks.h"
+#include "config.h"
 
 static unsigned int fnmode = 1;
 module_param(fnmode, uint, 0644);
 MODULE_PARM_DESC(fnmode, "Mode of fn key on Apple keyboards (0 = disabled, "
 		"[1] = fkeyslast, 2 = fkeysfirst)");
-
-static unsigned int iso_layout = 1;
-module_param(iso_layout, uint, 0644);
-MODULE_PARM_DESC(iso_layout, "Enable/Disable hardcoded ISO-layout of the keyboard. "
-		"(0 = disabled, [1] = enabled)");
-
-static unsigned int swap_opt_cmd;
-module_param(swap_opt_cmd, uint, 0644);
-MODULE_PARM_DESC(swap_opt_cmd, "Swap the Option (\"Alt\") and Command (\"Flag\") keys. "
-		"(For people who want to keep Windows PC keyboard muscle memory. "
-		"[0] = as-is, Mac layout. 1 = swapped, Windows layout.)");
-
-struct apple_sc {
-	unsigned long quirks;
-	unsigned int fn_on;
-	DECLARE_BITMAP(pressed_fn, KEY_CNT);
-	DECLARE_BITMAP(pressed_numlock, KEY_CNT);
-};
-
-struct apple_key_translation {
-	u16 from;
-	u16 to;
-	u8 flags;
-};
-
-static const struct apple_key_translation macbookair_fn_keys[] = {
-	{ KEY_BACKSPACE, KEY_DELETE },
-	{ KEY_ENTER,	KEY_INSERT },
-	{ KEY_F1,	KEY_BRIGHTNESSDOWN, APPLE_FLAG_FKEY },
-	{ KEY_F2,	KEY_BRIGHTNESSUP,   APPLE_FLAG_FKEY },
-	{ KEY_F3,	KEY_SCALE,          APPLE_FLAG_FKEY },
-	{ KEY_F4,	KEY_DASHBOARD,      APPLE_FLAG_FKEY },
-	{ KEY_F6,	KEY_PREVIOUSSONG,   APPLE_FLAG_FKEY },
-	{ KEY_F7,	KEY_PLAYPAUSE,      APPLE_FLAG_FKEY },
-	{ KEY_F8,	KEY_NEXTSONG,       APPLE_FLAG_FKEY },
-	{ KEY_F9,	KEY_MUTE,           APPLE_FLAG_FKEY },
-	{ KEY_F10,	KEY_VOLUMEDOWN,     APPLE_FLAG_FKEY },
-	{ KEY_F11,	KEY_VOLUMEUP,       APPLE_FLAG_FKEY },
-	{ KEY_F12,	KEY_EJECTCD,        APPLE_FLAG_FKEY },
-	{ KEY_UP,	KEY_PAGEUP },
-	{ KEY_DOWN,	KEY_PAGEDOWN },
-	{ KEY_LEFT,	KEY_HOME },
-	{ KEY_RIGHT,	KEY_END },
-	{ }
-};
-
-static const struct apple_key_translation apple_fn_keys[] = {
-	{ KEY_BACKSPACE, KEY_DELETE },
-	{ KEY_ENTER,	KEY_INSERT },
-	{ KEY_F1,	KEY_BRIGHTNESSDOWN, APPLE_FLAG_FKEY },
-	{ KEY_F2,	KEY_BRIGHTNESSUP,   APPLE_FLAG_FKEY },
-	{ KEY_F3,	KEY_SCALE,          APPLE_FLAG_FKEY },
-	{ KEY_F4,	KEY_DASHBOARD,      APPLE_FLAG_FKEY },
-	{ KEY_F5,	KEY_KBDILLUMDOWN,   APPLE_FLAG_FKEY },
-	{ KEY_F6,	KEY_KBDILLUMUP,     APPLE_FLAG_FKEY },
-	{ KEY_F7,	KEY_PREVIOUSSONG,   APPLE_FLAG_FKEY },
-	{ KEY_F8,	KEY_PLAYPAUSE,      APPLE_FLAG_FKEY },
-	{ KEY_F9,	KEY_NEXTSONG,       APPLE_FLAG_FKEY },
-	{ KEY_F10,	KEY_MUTE,           APPLE_FLAG_FKEY },
-	{ KEY_F11,	KEY_VOLUMEDOWN,     APPLE_FLAG_FKEY },
-	{ KEY_F12,	KEY_VOLUMEUP,       APPLE_FLAG_FKEY },
-	{ KEY_UP,	KEY_PAGEUP },
-	{ KEY_DOWN,	KEY_PAGEDOWN },
-	{ KEY_LEFT,	KEY_HOME },
-	{ KEY_RIGHT,	KEY_END },
-	{ }
-};
-
-static const struct apple_key_translation powerbook_fn_keys[] = {
-	{ KEY_BACKSPACE, KEY_DELETE },
-	{ KEY_F1,	KEY_BRIGHTNESSDOWN,     APPLE_FLAG_FKEY },
-	{ KEY_F2,	KEY_BRIGHTNESSUP,       APPLE_FLAG_FKEY },
-	{ KEY_F3,	KEY_MUTE,               APPLE_FLAG_FKEY },
-	{ KEY_F4,	KEY_VOLUMEDOWN,         APPLE_FLAG_FKEY },
-	{ KEY_F5,	KEY_VOLUMEUP,           APPLE_FLAG_FKEY },
-	{ KEY_F6,	KEY_NUMLOCK,            APPLE_FLAG_FKEY },
-	{ KEY_F7,	KEY_SWITCHVIDEOMODE,    APPLE_FLAG_FKEY },
-	{ KEY_F8,	KEY_KBDILLUMTOGGLE,     APPLE_FLAG_FKEY },
-	{ KEY_F9,	KEY_KBDILLUMDOWN,       APPLE_FLAG_FKEY },
-	{ KEY_F10,	KEY_KBDILLUMUP,         APPLE_FLAG_FKEY },
-	{ KEY_UP,	KEY_PAGEUP },
-	{ KEY_DOWN,	KEY_PAGEDOWN },
-	{ KEY_LEFT,	KEY_HOME },
-	{ KEY_RIGHT,	KEY_END },
-	{ }
-};
-
-static const struct apple_key_translation powerbook_numlock_keys[] = {
-	{ KEY_J,	KEY_KP1 },
-	{ KEY_K,	KEY_KP2 },
-	{ KEY_L,	KEY_KP3 },
-	{ KEY_U,	KEY_KP4 },
-	{ KEY_I,	KEY_KP5 },
-	{ KEY_O,	KEY_KP6 },
-	{ KEY_7,	KEY_KP7 },
-	{ KEY_8,	KEY_KP8 },
-	{ KEY_9,	KEY_KP9 },
-	{ KEY_M,	KEY_KP0 },
-	{ KEY_DOT,	KEY_KPDOT },
-	{ KEY_SLASH,	KEY_KPPLUS },
-	{ KEY_SEMICOLON, KEY_KPMINUS },
-	{ KEY_P,	KEY_KPASTERISK },
-	{ KEY_MINUS,	KEY_KPEQUAL },
-	{ KEY_0,	KEY_KPSLASH },
-	{ KEY_F6,	KEY_NUMLOCK },
-	{ KEY_KPENTER,	KEY_KPENTER },
-	{ KEY_BACKSPACE, KEY_BACKSPACE },
-	{ }
-};
-
-static const struct apple_key_translation apple_iso_keyboard[] = {
-	{ KEY_GRAVE,	KEY_102ND },
-	{ KEY_102ND,	KEY_GRAVE },
-	{ }
-};
-
-static const struct apple_key_translation swapped_option_cmd_keys[] = {
-	{ KEY_LEFTALT,	KEY_LEFTMETA },
-	{ KEY_LEFTMETA,	KEY_LEFTALT },
-	{ KEY_RIGHTALT,	KEY_RIGHTMETA },
-	{ KEY_RIGHTMETA,KEY_RIGHTALT },
-	{ }
-};
 
 static const struct apple_key_translation *apple_find_translation(
 		const struct apple_key_translation *table, u16 from)
@@ -202,7 +50,7 @@ static int hidinput_apple_event(struct hid_device *hid, struct input_dev *input,
 		else
 			table = apple_fn_keys;
 
-		trans = apple_find_translation (table, usage->code);
+		trans = apple_find_translation(table, usage->code);
 
 		if (trans) {
 			if (test_bit(usage->code, asc->pressed_fn))
@@ -248,24 +96,6 @@ static int hidinput_apple_event(struct hid_device *hid, struct input_dev *input,
 		}
 	}
 
-	if (iso_layout) {
-		if (hid->country == HID_COUNTRY_INTERNATIONAL_ISO) {
-			trans = apple_find_translation(apple_iso_keyboard, usage->code);
-			if (trans) {
-				input_event(input, usage->type, trans->to, value);
-				return 1;
-			}
-		}
-	}
-
-	if (swap_opt_cmd) {
-		trans = apple_find_translation(swapped_option_cmd_keys, usage->code);
-		if (trans) {
-			input_event(input, usage->type, trans->to, value);
-			return 1;
-		}
-	}
-
 	return 0;
 }
 
@@ -289,7 +119,6 @@ static int apple_event(struct hid_device *hdev, struct hid_field *field,
 			hidinput_apple_event(hdev, field->hidinput->input,
 				usage, value))
 		return 1;
-
 
 	return 0;
 }
@@ -325,9 +154,6 @@ static void apple_setup_input(struct input_dev *input)
 		set_bit(trans->to, input->keybit);
 
 	for (trans = powerbook_numlock_keys; trans->from; trans++)
-		set_bit(trans->to, input->keybit);
-
-	for (trans = apple_iso_keyboard; trans->from; trans++)
 		set_bit(trans->to, input->keybit);
 }
 
@@ -403,166 +229,6 @@ static int apple_probe(struct hid_device *hdev,
 	return 0;
 }
 
-static const struct hid_device_id apple_devices[] = {
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_MIGHTYMOUSE),
-		.driver_data = APPLE_MIGHTYMOUSE | APPLE_INVERT_HWHEEL },
-
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_FOUNTAIN_ANSI),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_FOUNTAIN_ISO),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_GEYSER_ANSI),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_GEYSER_ISO),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_GEYSER_JIS),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_GEYSER3_ANSI),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_GEYSER3_ISO),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_GEYSER3_JIS),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN |
-			APPLE_RDESC_JIS },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_GEYSER4_ANSI),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_GEYSER4_ISO),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_GEYSER4_JIS),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN |
-			APPLE_RDESC_JIS },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_ALU_MINI_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_ALU_MINI_ISO),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_ALU_MINI_JIS),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_ALU_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_ALU_ISO),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_ALU_JIS),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_GEYSER4_HF_ANSI),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_GEYSER4_HF_ISO),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_GEYSER4_HF_JIS),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN |
-			APPLE_RDESC_JIS },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_ALU_REVB_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_ALU_REVB_ISO),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_ALU_REVB_JIS),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_ALU_WIRELESS_ANSI),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_ALU_WIRELESS_ISO),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_ALU_WIRELESS_2011_ISO),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_APPLE,
-				USB_DEVICE_ID_APPLE_ALU_WIRELESS_2011_ANSI),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_APPLE,
-				USB_DEVICE_ID_APPLE_ALU_WIRELESS_2011_JIS),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_ALU_WIRELESS_JIS),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_MAGIC_KEYBOARD_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING_ISO),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING_JIS),
-		.driver_data = APPLE_HAS_FN | APPLE_RDESC_JIS },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING2_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING2_ISO),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING2_JIS),
-		.driver_data = APPLE_HAS_FN | APPLE_RDESC_JIS },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING3_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING3_ISO),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING3_JIS),
-		.driver_data = APPLE_HAS_FN | APPLE_RDESC_JIS },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING4_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING4_ISO),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING4_JIS),
-		.driver_data = APPLE_HAS_FN | APPLE_RDESC_JIS },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING4A_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING4A_ISO),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING4A_JIS),
-		.driver_data = APPLE_HAS_FN | APPLE_RDESC_JIS },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING5_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING5_ISO),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING5_JIS),
-		.driver_data = APPLE_HAS_FN | APPLE_RDESC_JIS },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING6_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING6_ISO),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING6_JIS),
-		.driver_data = APPLE_HAS_FN | APPLE_RDESC_JIS },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING6A_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING6A_ISO),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING6A_JIS),
-		.driver_data = APPLE_HAS_FN | APPLE_RDESC_JIS },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING5A_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING5A_ISO),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING5A_JIS),
-		.driver_data = APPLE_HAS_FN | APPLE_RDESC_JIS },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING7_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING7_ISO),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING7_JIS),
-		.driver_data = APPLE_HAS_FN | APPLE_RDESC_JIS },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING7A_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING7A_ISO),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING7A_JIS),
-		.driver_data = APPLE_HAS_FN | APPLE_RDESC_JIS },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING8_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING8_ISO),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING8_JIS),
-		.driver_data = APPLE_HAS_FN | APPLE_RDESC_JIS },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING9_ANSI),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING9_ISO),
-		.driver_data = APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_WELLSPRING9_JIS),
-		.driver_data = APPLE_HAS_FN | APPLE_RDESC_JIS },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_ALU_WIRELESS_2009_ANSI),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_ALU_WIRELESS_2009_ISO),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_ALU_WIRELESS_2009_JIS),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_FOUNTAIN_TP_ONLY),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-	{ HID_USB_DEVICE(USB_VENDOR_ID_APPLE, USB_DEVICE_ID_APPLE_GEYSER1_TP_ONLY),
-		.driver_data = APPLE_NUMLOCK_EMULATION | APPLE_HAS_FN },
-
-	{ }
-};
 MODULE_DEVICE_TABLE(hid, apple_devices);
 
 static struct hid_driver apple_driver = {
