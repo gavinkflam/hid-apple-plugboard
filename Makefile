@@ -1,12 +1,35 @@
-LINUX_HEADER_DIR ?= /usr/src/linux-headers-$(shell uname -r)
-OBJPATH=./obj
+LINUX_HEADER_DIR ?= /lib/modules/$(shell uname -r)/build
+OBJPATH ?= ./obj
 
-obj-$(CONFIG_HID_APPLE)		+= hid-apple.o
+obj-$(CONFIG_HID_APPLE) += hid-apple.o
 
-all: getobj hid-apple putobj
+# Proxy tasks for kenrel Makefile
 
-hid-apple:
+modules:
 	make -C $(LINUX_HEADER_DIR) M=$(CURDIR) modules
+
+clean:
+	make -C $(LINUX_HEADER_DIR) M=$(CURDIR) clean
+
+install:
+	make -C $(LINUX_HEADER_DIR) M=$(CURDIR) modules_install
+
+# Development REPL tasks
+
+devbuild: getobj modules putobj
+
+devrepl: devbuild unload load
+
+devclean:
+	rm -rf $(OBJPATH) *.ko
+
+load:
+	insmod hid-apple.ko
+
+unload:
+	-rmmod hid-apple 2>/dev/null
+
+reload: unload load
 
 putobj:
 	mkdir -p $(OBJPATH)
@@ -16,9 +39,3 @@ getobj:
 	if [[ -d "$(OBJPATH)" ]]; then \
 		mv $(OBJPATH)/{.[!.],}* .; \
 	fi
-
-cleanall:
-	make -C $(LINUX_HEADER_DIR) M=$(CURDIR) clean
-
-install:
-	make -C $(LINUX_HEADER_DIR) M=$(CURDIR) modules_install
