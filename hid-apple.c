@@ -33,24 +33,36 @@ static int hidinput_apple_event(struct hid_device *hid, struct input_dev *input,
 	struct apple_sc *asc = hid_get_drvdata(hid);
 	const struct apple_key_translation *trans, *table;
 
-	if (usage->code == KEY_FN) {
+	trans = apple_find_translation(key_mappings, usage->code);
+
+	if ((trans ? trans->to : usage->code) == KEY_FN) {
 		asc->fn_on = !!value;
-		input_event(input, usage->type, usage->code, value);
+		input_event(input, usage->type, KEY_FN, value);
+		return 1;
+	}
+
+	if (!(test_bit(usage->code, asc->pressed_fn) || asc->fn_on) &&
+			trans) {
+		input_event(input, usage->type, trans->to,
+				value);
 		return 1;
 	}
 
 	if (fnmode) {
 		int do_translate;
+		trans = apple_find_translation(fn_key_mappings, usage->code);
 
-		if (hid->product >= USB_DEVICE_ID_APPLE_WELLSPRING4_ANSI &&
-				hid->product <= USB_DEVICE_ID_APPLE_WELLSPRING4A_JIS)
-			table = macbookair_fn_keys;
-		else if (hid->product < 0x21d || hid->product >= 0x300)
-			table = powerbook_fn_keys;
-		else
-			table = apple_fn_keys;
+		if (!trans) {
+			if (hid->product >= USB_DEVICE_ID_APPLE_WELLSPRING4_ANSI &&
+					hid->product <= USB_DEVICE_ID_APPLE_WELLSPRING4A_JIS)
+				table = macbookair_fn_keys;
+			else if (hid->product < 0x21d || hid->product >= 0x300)
+				table = powerbook_fn_keys;
+			else
+				table = apple_fn_keys;
 
-		trans = apple_find_translation(table, usage->code);
+			trans = apple_find_translation(table, usage->code);
+		}
 
 		if (trans) {
 			if (test_bit(usage->code, asc->pressed_fn))
@@ -147,6 +159,14 @@ static void apple_setup_input(struct input_dev *input)
 	set_bit(KEY_NUMLOCK, input->keybit);
 
 	/* Enable all needed keys */
+	for (trans = key_mappings; trans->from; trans++) {
+		if (trans->to != KEY_FN)
+			set_bit(trans->to, input->keybit);
+	}
+
+	for (trans = fn_key_mappings; trans->from; trans++)
+		set_bit(trans->to, input->keybit);
+
 	for (trans = apple_fn_keys; trans->from; trans++)
 		set_bit(trans->to, input->keybit);
 

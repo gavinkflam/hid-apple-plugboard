@@ -5,6 +5,14 @@
 
 #include "hid-apple.h"
 
+static const struct apple_key_translation key_mappings[] = {
+	{ }
+};
+
+static const struct apple_key_translation fn_key_mappings[] = {
+	{ }
+};
+
 static const struct apple_key_translation macbookair_fn_keys[] = {
 	{ KEY_BACKSPACE, KEY_DELETE },
 	{ KEY_ENTER,	KEY_INSERT },
