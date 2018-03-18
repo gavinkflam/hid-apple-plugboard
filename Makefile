@@ -3,6 +3,9 @@ OBJPATH ?= ./obj
 
 obj-$(CONFIG_HID_APPLE) += hid-apple.o
 
+all: modules
+install: modules_install
+
 # Proxy tasks for kenrel Makefile
 
 modules:
@@ -11,7 +14,7 @@ modules:
 clean:
 	make -C $(LINUX_HEADER_DIR) M=$(CURDIR) clean
 
-install:
+modules_install:
 	make -C $(LINUX_HEADER_DIR) M=$(CURDIR) modules_install
 
 # Development REPL tasks
@@ -21,13 +24,13 @@ devbuild: getobj modules putobj
 devrepl: devbuild unload load
 
 devclean:
-	rm -rf $(OBJPATH) *.ko
+	-rm -rf $(OBJPATH) *.ko 2>/dev/null
 
 load:
 	insmod hid-apple.ko
 
 unload:
-	-rmmod hid-apple 2>/dev/null
+	-rmmod hid_apple 2>/dev/null
 
 reload: unload load
 
