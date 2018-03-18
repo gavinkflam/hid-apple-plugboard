@@ -5,6 +5,14 @@
 
 #include "hid-apple.h"
 
+/*
+ * Mode of media keys on Apple keyboards
+ * 0 = disabled, media keys are function keys
+ * 1 = normally media keys, switchable to function keys by holding fn key
+ * 2 = normally function keys, switchable to media keys by holding fn key
+ */
+static const unsigned int media_key_mode = 1;
+
 static const struct apple_key_translation key_mappings[] = {
 	{ }
 };

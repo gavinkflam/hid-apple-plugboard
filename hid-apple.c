@@ -9,11 +9,6 @@
 #include "quirks.h"
 #include "config.h"
 
-static unsigned int fnmode = 1;
-module_param(fnmode, uint, 0644);
-MODULE_PARM_DESC(fnmode, "Mode of fn key on Apple keyboards (0 = disabled, "
-		"[1] = fkeyslast, 2 = fkeysfirst)");
-
 static const struct apple_key_translation *apple_find_translation(
 		const struct apple_key_translation *table, u16 from)
 {
@@ -32,7 +27,14 @@ static int hidinput_apple_event(struct hid_device *hid, struct input_dev *input,
 {
 	struct apple_sc *asc = hid_get_drvdata(hid);
 	const struct apple_key_translation *trans, *table;
+	int do_translate;
 
+	/*
+	 * Do key mapping for normal layer.
+	 *
+	 * User may have mapped fn key to another key / another key to fn key.
+	 * Thus the fn key check should be based on the final mapped key.
+	 */
 	trans = apple_find_translation(key_mappings, usage->code);
 
 	if ((trans ? trans->to : usage->code) == KEY_FN) {
@@ -48,64 +50,74 @@ static int hidinput_apple_event(struct hid_device *hid, struct input_dev *input,
 		return 1;
 	}
 
-	if (fnmode) {
-		int do_translate;
-		trans = apple_find_translation(fn_key_mappings, usage->code);
+	/*
+	 * Do key mapping for fn layer.
+	 *
+	 * The key will be mapped with fn_key_mappings first.
+	 * Keys mapped by fn_key_mappings already will not be mapped with device
+	 * specific mapping table.
+	 */
+	trans = apple_find_translation(fn_key_mappings, usage->code);
 
-		if (!trans) {
-			if (hid->product >= USB_DEVICE_ID_APPLE_WELLSPRING4_ANSI &&
-					hid->product <= USB_DEVICE_ID_APPLE_WELLSPRING4A_JIS)
-				table = macbookair_fn_keys;
-			else if (hid->product < 0x21d || hid->product >= 0x300)
-				table = powerbook_fn_keys;
+	if (!trans) {
+		if (hid->product >= USB_DEVICE_ID_APPLE_WELLSPRING4_ANSI &&
+				hid->product <= USB_DEVICE_ID_APPLE_WELLSPRING4A_JIS)
+			table = macbookair_fn_keys;
+		else if (hid->product < 0x21d || hid->product >= 0x300)
+			table = powerbook_fn_keys;
+		else
+			table = apple_fn_keys;
+
+		trans = apple_find_translation(table, usage->code);
+	}
+
+	/*
+	 * Apply fn layer mapping according to fn key state and media key mode.
+	 */
+	if (trans) {
+		if (test_bit(usage->code, asc->pressed_fn))
+			do_translate = 1;
+		else if (trans->flags & APPLE_FLAG_FKEY)
+			do_translate = (media_key_mode == 2 && asc->fn_on) ||
+				(media_key_mode == 1 && !asc->fn_on);
+		else
+			do_translate = asc->fn_on;
+
+		if (do_translate) {
+			if (value)
+				set_bit(usage->code, asc->pressed_fn);
 			else
-				table = apple_fn_keys;
+				clear_bit(usage->code, asc->pressed_fn);
 
-			trans = apple_find_translation(table, usage->code);
-		}
-
-		if (trans) {
-			if (test_bit(usage->code, asc->pressed_fn))
-				do_translate = 1;
-			else if (trans->flags & APPLE_FLAG_FKEY)
-				do_translate = (fnmode == 2 && asc->fn_on) ||
-					(fnmode == 1 && !asc->fn_on);
-			else
-				do_translate = asc->fn_on;
-
-			if (do_translate) {
-				if (value)
-					set_bit(usage->code, asc->pressed_fn);
-				else
-					clear_bit(usage->code, asc->pressed_fn);
-
-				input_event(input, usage->type, trans->to,
-						value);
-
-				return 1;
-			}
-		}
-
-		if (asc->quirks & APPLE_NUMLOCK_EMULATION &&
-				(test_bit(usage->code, asc->pressed_numlock) ||
-				test_bit(LED_NUML, input->led))) {
-			trans = apple_find_translation(powerbook_numlock_keys,
-					usage->code);
-
-			if (trans) {
-				if (value)
-					set_bit(usage->code,
-							asc->pressed_numlock);
-				else
-					clear_bit(usage->code,
-							asc->pressed_numlock);
-
-				input_event(input, usage->type, trans->to,
-						value);
-			}
+			input_event(input, usage->type, trans->to,
+					value);
 
 			return 1;
 		}
+	}
+
+	/*
+	 * Do key mapping for numlock emulation quirk if applicable.
+	 */
+	if (asc->quirks & APPLE_NUMLOCK_EMULATION &&
+			(test_bit(usage->code, asc->pressed_numlock) ||
+			test_bit(LED_NUML, input->led))) {
+		trans = apple_find_translation(powerbook_numlock_keys,
+				usage->code);
+
+		if (trans) {
+			if (value)
+				set_bit(usage->code,
+						asc->pressed_numlock);
+			else
+				clear_bit(usage->code,
+						asc->pressed_numlock);
+
+			input_event(input, usage->type, trans->to,
+					value);
+		}
+
+		return 1;
 	}
 
 	return 0;
