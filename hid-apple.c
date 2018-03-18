@@ -27,13 +27,13 @@ static int hidinput_apple_event(struct hid_device *hid, struct input_dev *input,
 {
 	struct apple_sc *asc = hid_get_drvdata(hid);
 	const struct apple_key_translation *trans, *table;
-	int do_translate;
+	int fn_layer_on, numlock_layer_on, do_fn_translate;
 
 	/*
-	 * Do key mapping for normal layer.
+	 * Find key mapping for normal layer.
 	 *
 	 * User may have mapped fn key to another key / another key to fn key.
-	 * Thus the fn key check should be based on the final mapped key.
+	 * Thus the fn key check should be based on the mapped key.
 	 */
 	trans = apple_find_translation(key_mappings, usage->code);
 
@@ -43,7 +43,27 @@ static int hidinput_apple_event(struct hid_device *hid, struct input_dev *input,
 		return 1;
 	}
 
-	if (!(test_bit(usage->code, asc->pressed_fn) || asc->fn_on) &&
+	/*
+	 * Determine fn layer state according to fn key state and
+	 * key mode.
+	 */
+	fn_layer_on = test_bit(usage->code, asc->pressed_fn) || asc->fn_on;
+
+	/*
+	 * Determine numlock layer state according to numlock key state and
+	 * key mode.
+	 */
+	numlock_layer_on = 0;
+
+	if (test_bit(usage->code, asc->pressed_numlock) ||
+			test_bit(LED_NUML, input->led))
+		numlock_layer_on = numlock_mode == 2 ||
+			(numlock_mode == 1 && asc->quirks & APPLE_NUMLOCK_EMULATION);
+
+	/*
+	 * Apply mapped key if not in fn layer nor numlock layer.
+	 */
+	if (!(fn_layer_on || numlock_layer_on) &&
 			trans) {
 		input_event(input, usage->type, trans->to,
 				value);
@@ -72,37 +92,41 @@ static int hidinput_apple_event(struct hid_device *hid, struct input_dev *input,
 	}
 
 	/*
-	 * Apply fn layer mapping according to fn key state and media key mode.
+	 * Determine whether to do fn mapping according to fn later state
+	 * and media key mode.
 	 */
+	do_fn_translate = 0;
+
 	if (trans) {
 		if (test_bit(usage->code, asc->pressed_fn))
-			do_translate = 1;
+			do_fn_translate = 1;
 		else if (trans->flags & APPLE_FLAG_FKEY)
-			do_translate = (media_key_mode == 2 && asc->fn_on) ||
+			do_fn_translate = (media_key_mode == 2 && asc->fn_on) ||
 				(media_key_mode == 1 && !asc->fn_on);
 		else
-			do_translate = asc->fn_on;
-
-		if (do_translate) {
-			if (value)
-				set_bit(usage->code, asc->pressed_fn);
-			else
-				clear_bit(usage->code, asc->pressed_fn);
-
-			input_event(input, usage->type, trans->to,
-					value);
-
-			return 1;
-		}
+			do_fn_translate = asc->fn_on;
 	}
 
 	/*
-	 * Do key mapping for numlock emulation quirk if applicable.
+	 * Apply fn layer mapping according to fn key state and media key mode.
 	 */
-	if (asc->quirks & APPLE_NUMLOCK_EMULATION &&
-			(test_bit(usage->code, asc->pressed_numlock) ||
-			test_bit(LED_NUML, input->led))) {
-		trans = apple_find_translation(powerbook_numlock_keys,
+	if (do_fn_translate) {
+		if (value)
+			set_bit(usage->code, asc->pressed_fn);
+		else
+			clear_bit(usage->code, asc->pressed_fn);
+
+		input_event(input, usage->type, trans->to,
+				value);
+
+		return 1;
+	}
+
+	/*
+	 * Do numlock key mapping according to numlock layer state.
+	 */
+	if (numlock_layer_on) {
+		trans = apple_find_translation(numlock_key_mappings,
 				usage->code);
 
 		if (trans) {
@@ -179,13 +203,13 @@ static void apple_setup_input(struct input_dev *input)
 	for (trans = fn_key_mappings; trans->from; trans++)
 		set_bit(trans->to, input->keybit);
 
+	for (trans = numlock_key_mappings; trans->from; trans++)
+		set_bit(trans->to, input->keybit);
+
 	for (trans = apple_fn_keys; trans->from; trans++)
 		set_bit(trans->to, input->keybit);
 
 	for (trans = powerbook_fn_keys; trans->from; trans++)
-		set_bit(trans->to, input->keybit);
-
-	for (trans = powerbook_numlock_keys; trans->from; trans++)
 		set_bit(trans->to, input->keybit);
 }
 

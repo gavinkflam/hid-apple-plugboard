@@ -13,11 +13,42 @@
  */
 static const unsigned int media_key_mode = 1;
 
+/*
+ * Mode of numlock on Apple keyboards
+ * 0 = disabled, there were no numlock layer
+ * 1 = numlock layer enabled only for devices with numlock quirk
+ * 2 = numlock layer enabled for all devices
+ */
+static const unsigned int numlock_mode = 1;
+
 static const struct apple_key_translation key_mappings[] = {
 	{ }
 };
 
 static const struct apple_key_translation fn_key_mappings[] = {
+	{ }
+};
+
+static const struct apple_key_translation numlock_key_mappings[] = {
+	{ KEY_J,	KEY_KP1 },
+	{ KEY_K,	KEY_KP2 },
+	{ KEY_L,	KEY_KP3 },
+	{ KEY_U,	KEY_KP4 },
+	{ KEY_I,	KEY_KP5 },
+	{ KEY_O,	KEY_KP6 },
+	{ KEY_7,	KEY_KP7 },
+	{ KEY_8,	KEY_KP8 },
+	{ KEY_9,	KEY_KP9 },
+	{ KEY_M,	KEY_KP0 },
+	{ KEY_DOT,	KEY_KPDOT },
+	{ KEY_SLASH,	KEY_KPPLUS },
+	{ KEY_SEMICOLON, KEY_KPMINUS },
+	{ KEY_P,	KEY_KPASTERISK },
+	{ KEY_MINUS,	KEY_KPEQUAL },
+	{ KEY_0,	KEY_KPSLASH },
+	{ KEY_F6,	KEY_NUMLOCK },
+	{ KEY_KPENTER,	KEY_KPENTER },
+	{ KEY_BACKSPACE, KEY_BACKSPACE },
 	{ }
 };
 
@@ -80,29 +111,6 @@ static const struct apple_key_translation powerbook_fn_keys[] = {
 	{ KEY_DOWN,	KEY_PAGEDOWN },
 	{ KEY_LEFT,	KEY_HOME },
 	{ KEY_RIGHT,	KEY_END },
-	{ }
-};
-
-static const struct apple_key_translation powerbook_numlock_keys[] = {
-	{ KEY_J,	KEY_KP1 },
-	{ KEY_K,	KEY_KP2 },
-	{ KEY_L,	KEY_KP3 },
-	{ KEY_U,	KEY_KP4 },
-	{ KEY_I,	KEY_KP5 },
-	{ KEY_O,	KEY_KP6 },
-	{ KEY_7,	KEY_KP7 },
-	{ KEY_8,	KEY_KP8 },
-	{ KEY_9,	KEY_KP9 },
-	{ KEY_M,	KEY_KP0 },
-	{ KEY_DOT,	KEY_KPDOT },
-	{ KEY_SLASH,	KEY_KPPLUS },
-	{ KEY_SEMICOLON, KEY_KPMINUS },
-	{ KEY_P,	KEY_KPASTERISK },
-	{ KEY_MINUS,	KEY_KPEQUAL },
-	{ KEY_0,	KEY_KPSLASH },
-	{ KEY_F6,	KEY_NUMLOCK },
-	{ KEY_KPENTER,	KEY_KPENTER },
-	{ KEY_BACKSPACE, KEY_BACKSPACE },
 	{ }
 };
 
