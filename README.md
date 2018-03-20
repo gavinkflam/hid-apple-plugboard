@@ -31,14 +31,14 @@ Installation via DKMS (recommended)
 
 ```
 sudo dkms add .
-sudo dkms build hid-apple/1.0.0-rc.1
-sudo dkms install hid-apple/1.0.0-rc.1
+sudo dkms build hid-apple-plugboard/1.0.0-rc.1
+sudo dkms install hid-apple-plugboard/1.0.0-rc.1
 ```
 
 2. Override original `hid-apple` module
 
-You will need to create `/etc/depmod.d/hid-apple.conf` as shown below to
-override the original module.
+You will need to create `/etc/depmod.d/hid-apple-plugboard.conf`
+as shown below to override the original module.
 
 ```
 override hid_apple * extra
