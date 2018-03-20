@@ -44,6 +44,16 @@ as shown below to override the original module.
 override hid_apple * extra
 ```
 
+3. Reboot or reload the kernel module
+
+The new kernel will be effective after reboot.
+
+Moreover, you can reload the module for immediate use.
+
+```
+sudo modprobe -r hid-apple; sudo modprobe hid-apple
+```
+
 Goal
 ----
 
