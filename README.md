@@ -24,8 +24,20 @@ Configuration was done with `config.h`.
 You can find descriptions and examples for each configuration items within
 the file.
 
-Installation via DKMS (recommended)
------------------------------------
+Installation via package manager (recommended)
+----------------------------------------------
+
+You are recommended to create a package with your own
+configurations/modifications then install with the package manager.
+
+You can find the examples provided as follows.
+
+Arch Linux:
+- [hid-apple-plugboard-git-dkms](https://github.com/gavinkflam/hid-apple-plugboard-git-dkms)
+- [hid-apple-plugboard-git-dkms-custom](https://github.com/gavinkflam/hid-apple-plugboard-git-dkms-custom)
+
+Installation via DKMS
+---------------------
 
 1. Install module via DKMS
 
@@ -57,7 +69,7 @@ sudo modprobe -r hid-apple; sudo modprobe hid-apple
 Goal
 ----
 
-Simple and readable. Easily customizable for power user.
+Simple, minimal and readable. Easily customizable for power user.
 
 Acknowledgement
 ---------------
