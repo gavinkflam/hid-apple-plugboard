@@ -1,31 +1,27 @@
-hid-apple-plugboard
-===================
+# hid-apple-plugboard
 
-Customizable key mappings for Apple keyboards.
+Customizable key mappings for Apple and Macbook keyboards.
 
-Functionality
--------------
+![enigma-plugboard][enigma-plugboard]
 
-* Support key mappings in the normal layer.
+## Functionality
+
+* Support key mappings in normal layer.
 * `fn` key can be mapped to another key and vice versa.
-* Support key mappings in the fn layer.
-* Support key mappings in the numlock layer.
+* Support key mappings in fn layer.
+* Support key mappings in numlock layer.
 * Support various media key mode and numlock mode.
-  Please refer to `config.h` for explanations.
 * Support device specific fn key mappings as the original module supported.
 * Support numlock quirks as the original module supported.
 * Support devices as the original module supported.
 
-Configuration
--------------
+## Configuration
 
 Configuration was done with `config.h`.
 
-You can find descriptions and examples for each configuration items within
-the file.
+You can read the file to find descriptions and examples.
 
-Installation via package manager (recommended)
-----------------------------------------------
+## Installation via package manager (recommended)
 
 You are recommended to create a package with your own
 configurations/modifications then install with the package manager.
@@ -33,58 +29,65 @@ configurations/modifications then install with the package manager.
 You can find the examples provided as follows.
 
 Arch Linux:
-- [hid-apple-plugboard-git-dkms](https://gitlab.com/gavinkflam/hid-apple-plugboard-git-dkms)
-- [hid-apple-kestrel-git-dkms](https://gitlab.com/gavinkflam/hid-apple-kestrel-git-dkms)
 
-Installation via DKMS
----------------------
+- [hid-apple-plugboard-git-dkms][hid-apple-plugboard-git-dkms]
+- [hid-apple-kestrel-git-dkms][hid-apple-kestrel-git-dkms]
+
+## Installation via DKMS
 
 1. Install module via DKMS
 
-```
-sudo dkms add .
-sudo dkms build hid-apple-plugboard/1.0.0-rc.1
-sudo dkms install hid-apple-plugboard/1.0.0-rc.1
-```
+  ```
+  sudo dkms add .
+  sudo dkms build hid-apple-plugboard/4.18.0
+  sudo dkms install hid-apple-plugboard/4.18.0
+  ```
 
 2. Override original `hid-apple` module
 
-You will need to create `/etc/depmod.d/hid-apple-plugboard.conf`
-as shown below to override the original module.
+  You will need to create `/etc/depmod.d/hid-apple-plugboard.conf`
+  to override the original module.
 
-```
-override hid_apple * extra
-```
+  ```
+  override hid_apple * extra
+  ```
 
 3. Reboot or reload the kernel module
 
-The new kernel will be effective after reboot.
+  The new kernel will be effective after reboot.
 
-Moreover, you can reload the module for immediate use.
+  Moreover, you can reload the module for immediate use.
 
-```
-sudo modprobe -r hid-apple; sudo modprobe hid-apple
-```
+  ```
+  sudo modprobe -r hid-apple; sudo modprobe hid-apple
+  ```
 
-Goal
-----
+## Goal
 
 Simple, minimal and readable. Easily customizable for power user.
 
-Acknowledgement
----------------
+## Acknowledgement
 
-This work was inspired by the
-[hid-apple-patched](https://github.com/free5lot/hid-apple-patched/)
-project by free5lot and other contributors.
+The kernel module was based on Linux 4.18 hid-apple module licensed under GPLv2.
 
-The DKMS configuration file and Makefile was based on that of the
-hid-apple-patched project.
+* [hid-apple.c][hid-apple.c]
+* [hid-ids.h][hid-ids.h]
 
-The source was based on the `hid-apple` module from
-[Linux 4.15-rc9](https://github.com/torvalds/linux/blob/v4.15-rc9/drivers/hid/hid-apple.c).
+The DKMS module and makefile was based on [hid-apple-patched][hid-apple-patched]
+by free5lot and other contributors licensed under GPLv2.
 
-License
--------
+Enigma plugboard photo by Bob Lord licensed under [GFDL][gfdl] or
+[CC-BY-SA-3.0][cc-by-sa-3-0] via Wikimedia Commons.
+
+## License
 
 GPLv2
+
+[enigma-plugboard]: https://upload.wikimedia.org/wikipedia/commons/2/27/Enigma-plugboard.jpg
+[hid-apple-plugboard-git-dkms]: https://gitlab.com/gavinkflam/hid-apple-plugboard-git-dkms
+[hid-apple-kestrel-git-dkms]: https://gitlab.com/gavinkflam/hid-apple-kestrel-git-dkms
+[hid-apple-patched]: https://github.com/free5lot/hid-apple-patched/
+[hid-apple.c]: https://github.com/torvalds/linux/blob/v4.18/drivers/hid/hid-apple.c
+[hid-ids.h]: https://github.com/torvalds/linux/blob/v4.18/drivers/hid/hid-ids.h
+[gfdl]: http://www.gnu.org/copyleft/fdl.html
+[cc-by-sa-3-0]: http://creativecommons.org/licenses/by-sa/3.0/
