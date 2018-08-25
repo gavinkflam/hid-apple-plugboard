@@ -33,8 +33,8 @@ configurations/modifications then install with the package manager.
 You can find the examples provided as follows.
 
 Arch Linux:
-- [hid-apple-plugboard-git-dkms](https://github.com/gavinkflam/hid-apple-plugboard-git-dkms)
-- [hid-apple-plugboard-git-dkms-custom](https://github.com/gavinkflam/hid-apple-plugboard-git-dkms-custom)
+- [hid-apple-plugboard-git-dkms](https://gitlab.com/gavinkflam/hid-apple-plugboard-git-dkms)
+- [hid-apple-kestrel-git-dkms](https://gitlab.com/gavinkflam/hid-apple-kestrel-git-dkms)
 
 Installation via DKMS
 ---------------------
