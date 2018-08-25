@@ -83,7 +83,7 @@ Enigma plugboard photo by Bob Lord licensed under [GFDL][gfdl] or
 
 GPLv2
 
-[enigma-plugboard]: https://upload.wikimedia.org/wikipedia/commons/2/27/Enigma-plugboard.jpg
+[enigma-plugboard]: https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Enigma-plugboard.jpg/640px-Enigma-plugboard.jpg
 [hid-apple-plugboard-git-dkms]: https://gitlab.com/gavinkflam/hid-apple-plugboard-git-dkms
 [hid-apple-kestrel-git-dkms]: https://gitlab.com/gavinkflam/hid-apple-kestrel-git-dkms
 [hid-apple-patched]: https://github.com/free5lot/hid-apple-patched/
