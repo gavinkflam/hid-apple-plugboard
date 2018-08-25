@@ -31,7 +31,7 @@ You can find the examples provided as follows.
 Arch Linux:
 
 - [hid-apple-plugboard-git-dkms][hid-apple-plugboard-git-dkms]
-- [hid-apple-kestrel-git-dkms][hid-apple-kestrel-git-dkms]
+- [hid-apple-plugboard-git-dkms-kestrel][hid-apple-plugboard-git-dkms-kestrel]
 
 ## Installation via DKMS
 
@@ -85,7 +85,7 @@ GPLv2
 
 [enigma-plugboard]: https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Enigma-plugboard.jpg/640px-Enigma-plugboard.jpg
 [hid-apple-plugboard-git-dkms]: https://gitlab.com/gavinkflam/hid-apple-plugboard-git-dkms
-[hid-apple-kestrel-git-dkms]: https://gitlab.com/gavinkflam/hid-apple-kestrel-git-dkms
+[hid-apple-plugboard-git-dkms-kestrel]: https://gitlab.com/gavinkflam/hid-apple-plugboard-git-dkms-kestrel
 [hid-apple-patched]: https://github.com/free5lot/hid-apple-patched/
 [hid-apple.c]: https://github.com/torvalds/linux/blob/v4.18/drivers/hid/hid-apple.c
 [hid-ids.h]: https://github.com/torvalds/linux/blob/v4.18/drivers/hid/hid-ids.h
