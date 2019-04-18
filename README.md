@@ -39,8 +39,8 @@ Arch Linux:
 
   ```
   sudo dkms add .
-  sudo dkms build hid-apple-plugboard/4.20.0
-  sudo dkms install hid-apple-plugboard/4.20.0
+  sudo dkms build hid-apple-plugboard/5.0.0
+  sudo dkms install hid-apple-plugboard/5.0.0
   ```
 
 2. Override original `hid-apple` module
@@ -68,7 +68,7 @@ Simple, minimal and readable. Easily customizable for power user.
 
 ## Acknowledgement
 
-The kernel module was based on Linux 4.20 hid-apple module licensed under GPLv2.
+The kernel module was based on Linux 5.0 hid-apple module licensed under GPLv2.
 
 * [hid-apple.c][hid-apple.c]
 * [hid-ids.h][hid-ids.h]
@@ -87,7 +87,7 @@ GPLv2
 [hid-apple-plugboard-git-dkms]: https://gitlab.com/gavinkflam/hid-apple-plugboard-git-dkms
 [hid-apple-plugboard-git-dkms-kestrel]: https://gitlab.com/gavinkflam/hid-apple-plugboard-git-dkms-kestrel
 [hid-apple-patched]: https://github.com/free5lot/hid-apple-patched/
-[hid-apple.c]: https://github.com/torvalds/linux/blob/v4.20/drivers/hid/hid-apple.c
-[hid-ids.h]: https://github.com/torvalds/linux/blob/v4.20/drivers/hid/hid-ids.h
+[hid-apple.c]: https://github.com/torvalds/linux/blob/v5.0/drivers/hid/hid-apple.c
+[hid-ids.h]: https://github.com/torvalds/linux/blob/v5.0/drivers/hid/hid-ids.h
 [gfdl]: http://www.gnu.org/copyleft/fdl.html
 [cc-by-sa-3-0]: http://creativecommons.org/licenses/by-sa/3.0/
